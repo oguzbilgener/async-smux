@@ -12,9 +12,10 @@ use tokio::{
     task::JoinSet,
 };
 
-const BUF_SIZE: usize = 1024 * 60;
-const LARGE_SIZE: usize = 1024 * 1024 * 1024;
-const MAX_QUEUE: usize = 128 * 1024;
+const BUF_SIZE: usize = 1024 * 32;
+const LARGE_SIZE: usize = 1024 * 1024 * 256;
+const MAX_QUEUE: usize = 512;
+// const MAX_QUEUE: usize = 128 * 1024;
 const COUNT: usize = 100;
 const LARGE_FREQ: usize = 10;
 const BREAK: u8 = b'\n';
@@ -32,37 +33,39 @@ async fn echo_server() {
 
     println!("server launched");
     while let Some(mut mux_stream) = acceptor.accept().await {
-        let mut buf = [0u8; BUF_SIZE];
-        loop {
-            let Ok(mut length) = mux_stream.read(&mut buf).await else {
-                break;
-            };
-            if length == 0 {
-                break;
-            }
-            for (i, c) in buf[..length].iter().enumerate() {
-                if *c == BREAK {
-                    length = i + 1;
+        tokio::spawn(async move {
+            let mut buf = [0u8; BUF_SIZE];
+            loop {
+                let Ok(mut length) = mux_stream.read(&mut buf).await else {
+                        break;
+                    };
+                if length == 0 {
+                    break;
                 }
-            }
-            if buf[0] == b'@' {
-                let s = String::from_utf8_lossy(&buf[7..16]);
-                println!("                          {} Received, now sending", s);
-            }
-            match mux_stream.write(&buf[..length]).await {
-                Ok(written) => {
-                    if written < length {
-                        println!("Write not complete");
+                for (i, c) in buf[..length].iter().enumerate() {
+                    if *c == BREAK {
+                        length = i + 1;
+                    }
+                }
+                if buf[0] == b'@' {
+                    let s = String::from_utf8_lossy(&buf[7..16]);
+                    println!("                          {} Received, now sending", s);
+                }
+                match mux_stream.write(&buf[..length]).await {
+                    Ok(written) => {
+                        if written < length {
+                            println!("Write not complete");
+                            break;
+                        }
+                    }
+                    Err(_err) => {
                         break;
                     }
                 }
-                Err(_err) => {
-                    break;
-                }
+                let _ = mux_stream.flush().await;
             }
-            let _ = mux_stream.flush().await;
-        }
-        mux_stream.shutdown().await.unwrap();
+            mux_stream.shutdown().await.unwrap();
+        });
     }
 }
 

@@ -180,8 +180,9 @@ impl<T: TokioConn> Future for MuxTimer<T> {
             ready!(self.interval.poll_tick(cx));
             self.interval.reset();
 
-            let ts = get_timestamp_slow();
-            self.timestamp.store(ts, Ordering::SeqCst);
+            // let ts = get_timestamp_slow();
+            let ts = 0;
+            // self.timestamp.store(ts, Ordering::SeqCst);
             let mut state = self.state.lock();
 
             // Ping
@@ -359,7 +360,6 @@ impl<T: TokioConn> AsyncRead for MuxStream<T> {
                 }
                 return Poll::Ready(Ok(()));
             }
-
             let frame = ready!(self.state.lock().poll_read_stream_data(cx, self.stream_id))
                 .map_err(mux_to_io_err)?;
             debug_assert_eq!(frame.header.command, MuxCommand::Push);
@@ -667,7 +667,8 @@ impl<T: TokioConn> MuxState<T> {
 
     #[inline]
     fn get_timestamp(&self) -> u64 {
-        self.timestamp.load(Ordering::Relaxed)
+        0
+        // self.timestamp.load(Ordering::Relaxed)
     }
 
     fn poll_stream_write_ready(&mut self, cx: &Context<'_>, stream_id: u32) -> Poll<()> {
