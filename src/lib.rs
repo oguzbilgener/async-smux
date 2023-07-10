@@ -39,7 +39,7 @@ pub(crate) mod mux;
 
 pub use builder::MuxBuilder;
 pub use config::{MuxConfig, StreamIdType};
-pub use mux::{mux_connection, MuxAcceptor, MuxConnector, MuxStream};
+pub use mux::{mux_connection, MuxAcceptor, MuxConnector, MuxStream, MuxWorker};
 
 #[cfg(test)]
 mod tests {
